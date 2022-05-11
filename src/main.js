@@ -1,7 +1,8 @@
 import Vue from "vue";
 import App from "./App.vue";
 
-import '../node_modules/bootstrap/scss/bootstrap.scss';
+import "./fake-chat.scss";
+import "bootstrap/js/dist/modal";
 
 Vue.config.productionTip = false;
 
