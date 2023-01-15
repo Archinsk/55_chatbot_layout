@@ -20,7 +20,7 @@
         </section>
         <section class="promises bg-white text-start">
           <p>
-            В нашей академии тебя научат успешному успеху, который заполнит все
+            В нашей академии тебя научат успешному успеху, который охватит все
             сферы твоей жизни. Наши респектабельные коучи научат тебя
             зарабатывать <b>over 1 000 000 рублей в месяц</b>. Возможно, ты сам
             сможешь стать тренером тренеров.
@@ -41,21 +41,29 @@
           <p>Следующий старт {{ deadlineDate }}</p>
           <p class="important">
             До старта осталось<br />
-            {{ daysToDeadline }} дней
+            <!--            {{ daysToDeadline }} дней-->
             {{ String(hoursToDeadline).padStart(2, "0") }} часов
             {{ String(minutesToDeadline).padStart(2, "0") }} минут
             {{ String(secondsToDeadline).padStart(2, "0") }} секунд
           </p>
           <button
-            :class="['btn btn-primary mb-3', { disabled: isDeadline }]"
+            :class="[
+              'btn btn-primary mb-3',
+              { disabled: isDeadline || !vacancies || isSubscribe },
+            ]"
             data-bs-toggle="modal"
             data-bs-target="#exampleModal"
+            @click="subscribeUser"
           >
             Запись на курс
           </button>
           <p>
-            <b
+            <b v-if="vacancies && !isDeadline"
               >Осталось <span>{{ vacancies }}</span> мест!</b
+            >
+            <b v-else
+              >К сожалению места закончились. Ожидайте следующего уникального
+              набора</b
             >
           </p>
           <p class="important">Иди навстречу своей мечте!</p>
@@ -67,12 +75,10 @@
           </p>
           <p>
             Многие студенты после прохождения курса находят спутника своей
-            жизни. Некоторые из наших студентов смогли изучать несколько
-            иностранных языков одновременно, другие раскрыли себя для игры на
-            музыкальных инструментах. Пары, которые не могли завести детей
-            долгое время, после курса получили желанного ребенка. У лысых мужчин
-            после курса начинают расти волосы, у слабовидящих - улучшается
-            зрение, а у слабослышащих - слух.
+            жизни. Некоторым из наших студентов курс помог раскрыть способность
+            изучения нескольких иностранных языков одновременно, другим -
+            способность игры на музыкальных инструментах. Пары, которые не могли
+            завести детей долгое время, после курса получили желанного ребенка.
           </p>
           <p>
             Уже через месяц после прохождения курса нашей академии большинство
@@ -100,7 +106,15 @@
             Бесплатный совет от академии: если у Вас совершенно плачевное
             финансовое состояние в данный момент, воспользуйтесь услугами
             микрокредитной организации
-            <b><a href="#">"Лёгкие деньги под 2% в день"</a></b
+            <b
+              ><a
+                href="#"
+                role="button"
+                data-bs-toggle="modal"
+                data-bs-target="#exampleModal"
+                @click="subscribeUser"
+                >"Лёгкие деньги под 2% в день"</a
+              ></b
             >.
           </p>
           <p class="important">И успех непременно тебя настигнет!</p>
@@ -202,6 +216,17 @@ export default {
 
   data() {
     return {
+      daysToDeadline: 0,
+      hoursToDeadline: 2,
+      minutesToDeadline: 10,
+      secondsToDeadline: 15,
+      vacancies: 15,
+      vacanciesCountdownSeconds: null,
+      vacanciesCountdownSecondsDefault: 35,
+      timerId: null,
+      isDeadline: false,
+      isSubscribe: false,
+
       question: "",
       answers: [
         "Благодарим за обращение. Мы свяжемся с вами как только закончим праздновать ваше обращение!",
@@ -215,14 +240,6 @@ export default {
         "С помощью удалённого доступа я случайно удалил все файлы с Вашего устройства. Извините. Был рад помочь!",
       ],
       isChatActive: false,
-
-      daysToDeadline: 2,
-      hoursToDeadline: 2,
-      minutesToDeadline: 10,
-      secondsToDeadline: 15,
-      vacancies: 15,
-      timerId: null,
-      isDeadline: false,
     };
   },
 
@@ -241,31 +258,6 @@ export default {
   },
 
   methods: {
-    addQuestion() {
-      let dialogContainer = document.getElementById("dialog");
-      let newMessage = document.createElement("div");
-      newMessage.className = "replica question text-end";
-      newMessage.textContent = this.question;
-      dialogContainer.append(newMessage);
-      this.question = "";
-      setTimeout(this.fakeAnswer, 500);
-    },
-
-    fakeAnswer() {
-      let dialogContainer = document.getElementById("dialog");
-      let newMessage = document.createElement("div");
-      newMessage.className = "replica answer text-start";
-      newMessage.textContent =
-        this.answers[Math.floor(Math.random() * this.answers.length)];
-      dialogContainer.append(newMessage);
-      this.scrollDown();
-    },
-
-    scrollDown() {
-      let scrollable = document.getElementById("wrapper");
-      scrollable.scrollTop = 0;
-    },
-
     countDown() {
       if (!this.secondsToDeadline) {
         if (!this.minutesToDeadline) {
@@ -285,19 +277,60 @@ export default {
             this.secondsToDeadline = 59;
           }
         } else {
-          if (this.minutesToDeadline % 5 === 0 && this.vacancies > 1) {
-            this.vacancies--;
-          }
           this.minutesToDeadline--;
           this.secondsToDeadline = 59;
         }
       } else {
         this.secondsToDeadline--;
       }
+
+      if (this.vacancies) {
+        if (!this.vacanciesCountdownSeconds) {
+          this.vacancies--;
+          this.vacanciesCountdownSeconds =
+            this.vacanciesCountdownSecondsDefault;
+        } else {
+          this.vacanciesCountdownSeconds--;
+        }
+      }
+    },
+
+    subscribeUser() {
+      this.isSubscribe = true;
+      this.vacancies--;
+    },
+
+    addQuestion() {
+      if (this.question.trim()) {
+        let dialogContainer = document.getElementById("dialog");
+        let newMessage = document.createElement("div");
+        newMessage.className = "replica question text-end";
+        newMessage.textContent = this.question;
+        dialogContainer.append(newMessage);
+        this.question = "";
+        setTimeout(this.fakeAnswer, 500);
+      }
+    },
+
+    fakeAnswer() {
+      let dialogContainer = document.getElementById("dialog");
+      let newMessage = document.createElement("div");
+      newMessage.className = "replica answer text-start";
+      newMessage.textContent =
+        this.answers[Math.floor(Math.random() * this.answers.length)];
+      dialogContainer.append(newMessage);
+      this.scrollDown();
+    },
+
+    // Если список длинный, просматриваются ранние сообщения и вводится новое сообщение, то данный метод прокручивает список к последнему введенному сообщению
+    scrollDown() {
+      let scrollable = document.getElementById("wrapper");
+      scrollable.scrollTop = 0;
     },
   },
 
   mounted() {
+    this.vacanciesCountdownSeconds = this.vacanciesCountdownSecondsDefault;
     this.timerId = setInterval(this.countDown, 1000);
   },
 };
@@ -320,8 +353,6 @@ export default {
 }
 
 #application {
-  height: 100vh;
-  text-align: center;
   font-family: "Caveat";
   font-size: 1.5rem;
   line-height: 1.25;
@@ -482,10 +513,9 @@ export default {
         /*}*/
 
         #dialog {
-          min-height: min-content;
           display: flex;
           flex-direction: column;
-          padding: 0 0.5rem;
+          padding: 0.5rem 0.5rem 0;
           /*Способ №2*/
           /*display: inline-flex;*/
 
@@ -494,6 +524,7 @@ export default {
             max-width: calc(100% - 3.5rem);
             margin-bottom: 0.5rem;
             display: inline-block;
+            overflow-wrap: break-word;
           }
 
           .answer {
